@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fake Job Posting Detector</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(19, 27, 49, .88);
+      --panel2: #151f38;
+      --text: #edf2ff;
+      --muted: #9aa8c7;
+      --line: rgba(160, 180, 220, .17);
+      --accent: #7c9cff;
+      --accent2: #55d6b0;
+      --danger: #ff7185;
+      --warning: #ffca70;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 36px 18px;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      background:
+        radial-gradient(circle at 12% 5%, rgba(91,124,255,.19), transparent 32rem),
+        radial-gradient(circle at 90% 85%, rgba(53,202,165,.12), transparent 28rem),
+        var(--bg);
+    }
+    .wrap { width: min(1040px, 100%); margin: auto; }
+    header { margin-bottom: 26px; }
+    .eyebrow { color: var(--accent2); font-size: .76rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 10px 0 8px; font-size: clamp(2rem, 5vw, 3.1rem); letter-spacing: -.045em; }
+    header p { color: var(--muted); margin: 0; line-height: 1.6; max-width: 680px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .8fr); gap: 20px; align-items: start; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+      padding: 24px; box-shadow: 0 22px 70px rgba(0,0,0,.24); backdrop-filter: blur(12px);
+    }
+    h2 { font-size: 1rem; margin: 0 0 18px; letter-spacing: .02em; }
+    .section { padding-bottom: 22px; margin-bottom: 22px; border-bottom: 1px solid var(--line); }
+    .section:last-child { border: 0; padding: 0; margin: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    label { color: #dbe4fa; font-size: .86rem; font-weight: 650; }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 11px;
+      background: #0d1529; color: var(--text); padding: 12px 13px;
+      font: inherit; outline: none; transition: border .18s, box-shadow .18s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,156,255,.13); }
+    textarea { resize: vertical; min-height: 145px; line-height: 1.55; }
+    input::placeholder, textarea::placeholder { color: #697795; }
+    .hint { color: var(--muted); font-size: .76rem; line-height: 1.45; }
+    .toggles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .toggle {
+      display: flex; align-items: center; gap: 10px; padding: 13px;
+      border: 1px solid var(--line); background: #0d1529; border-radius: 12px;
+      font-size: .82rem; line-height: 1.3; cursor: pointer;
+    }
+    .toggle input { width: 17px; height: 17px; accent-color: var(--accent2); margin: 0; flex: 0 0 auto; }
+    button {
+      width: 100%; border: 0; border-radius: 12px; padding: 14px 18px;
+      color: #071326; background: linear-gradient(100deg, #91aaff, #5ee0bd);
+      font-weight: 850; font-size: .95rem; cursor: pointer; transition: transform .15s, opacity .15s;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: .55; cursor: wait; transform: none; }
+    .side-title { margin-bottom: 8px; }
+    .side-copy { color: var(--muted); font-size: .88rem; line-height: 1.6; margin: 0 0 20px; }
+    .result { display: none; margin-top: 18px; padding: 17px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); }
+    .result.show { display: block; }
+    .result-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; font-weight: 800; }
+    .result-value { font-size: 1.55rem; font-weight: 850; margin: 6px 0 12px; }
+    .meter { height: 8px; background: #293653; border-radius: 20px; overflow: hidden; }
+    .meter-fill { height: 100%; width: 0; background: var(--accent2); border-radius: inherit; transition: width .3s; }
+    .probability { display: flex; justify-content: space-between; color: var(--muted); font-size: .8rem; margin-top: 8px; }
+    .error { display: none; color: #ffd4da; background: rgba(255,113,133,.1); border: 1px solid rgba(255,113,133,.3); padding: 12px; border-radius: 10px; margin-top: 14px; font-size: .85rem; line-height: 1.5; }
+    .error.show { display: block; }
+    .note { color: var(--muted); font-size: .76rem; line-height: 1.55; margin-top: 18px; }
+    @media (max-width: 760px) {
+      .layout { grid-template-columns: 1fr; }
+      .toggles { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      body { padding: 24px 12px; }
+      .card { padding: 18px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="eyebrow">Machine learning · NLP classifier</div>
+      <h1>Fake Job Posting Detector</h1>
+      <p>Review a job listing for potential fraud signals. Enter the listing content and its attributes, then submit it to your trained Logistic Regression pipeline.</p>
+    </header>
+
+    <div class="layout">
+      <form class="card" id="jobForm">
+        <section class="section">
+          <h2>01 — Job listing content</h2>
+          <div class="field">
+            <label for="text">Job listing text <span aria-hidden="true">*</span></label>
+            <textarea id="text" name="text" minlength="20" required
+              placeholder="Paste the job title, company profile, description, requirements and benefits here. Include as much of the original listing as possible."></textarea>
+            <div class="hint"><span id="charCount">0</span> characters · Minimum 20 characters. More complete listing text gives the model more information.</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>02 — Employment attributes</h2>
+          <div class="grid">
+            <div class="field">
+              <label for="location">Location</label>
+              <input id="location" name="location" type="text" placeholder="e.g. Bhopal, India" />
+            </div>
+            <div class="field">
+              <label for="employment_type">Employment type</label>
+              <input id="employment_type" name="employment_type" type="text" list="employmentOptions" placeholder="e.g. Full-time" />
+              <datalist id="employmentOptions">
+                <option value="Full-time"><option value="Part-time"><option value="Contract"><option value="Temporary"><option value="Other">
+              </datalist>
+            </div>
+            <div class="field">
+              <label for="required_experience">Required experience</label>
+              <input id="required_experience" name="required_experience" type="text" list="experienceOptions" placeholder="e.g. Entry level" />
+              <datalist id="experienceOptions">
+                <option value="Internship"><option value="Entry level"><option value="Associate"><option value="Mid-Senior level"><option value="Director"><option value="Executive"><option value="Not Applicable">
+              </datalist>
+            </div>
+            <div class="field">
+              <label for="required_education">Required education</label>
+              <input id="required_education" name="required_education" type="text" list="educationOptions" placeholder="e.g. Bachelor's Degree" />
+              <datalist id="educationOptions">
+                <option value="High School or equivalent"><option value="Some College Coursework Completed"><option value="Bachelor's Degree"><option value="Master's Degree"><option value="Associate Degree"><option value="Professional"><option value="Doctorate"><option value="Vocational"><option value="Certification"><option value="Not Applicable">
+              </datalist>
+            </div>
+            <div class="field">
+              <label for="industry">Industry</label>
+              <input id="industry" name="industry" type="text" placeholder="e.g. Information Technology" />
+            </div>
+            <div class="field">
+              <label for="function">Function</label>
+              <input id="function" name="function" type="text" placeholder="e.g. Engineering" />
+            </div>
+          </div>
+          <p class="hint">Use the dataset's original category wording when possible. Unseen category values may be ignored by the trained encoder.</p>
+        </section>
+
+        <section class="section">
+          <h2>03 — Listing signals</h2>
+          <div class="toggles">
+            <label class="toggle"><input id="telecommuting" type="checkbox" /> Remote / telecommuting</label>
+            <label class="toggle"><input id="has_company_logo" type="checkbox" /> Company logo present</label>
+            <label class="toggle"><input id="has_questions" type="checkbox" /> Screening questions</label>
+          </div>
+        </section>
+
+        <button type="submit" id="submitBtn">Analyze job posting</button>
+        <div class="error" id="errorBox" role="alert"></div>
+      </form>
+
+      <aside class="card">
+        <h2 class="side-title">Prediction result</h2>
+        <p class="side-copy">The result is generated by your trained model and uses the 0.7 fraud-probability threshold configured in your backend.</p>
+        <div class="result" id="resultBox" aria-live="polite">
+          <div class="result-label">Model classification</div>
+          <div class="result-value" id="resultValue">—</div>
+          <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+          <div class="probability"><span>Fraud probability</span><strong id="probabilityValue">—</strong></div>
+          <p class="hint" id="thresholdText"></p>
+        </div>
+        <p class="note">Important: this is a machine-learning estimate, not proof that a job is genuine or fraudulent. Verify the employer, official website, contact details and never pay to apply for a job.</p>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById("jobForm");
+    const textInput = document.getElementById("text");
+    const charCount = document.getElementById("charCount");
+    const submitBtn = document.getElementById("submitBtn");
+    const errorBox = document.getElementById("errorBox");
+    const resultBox = document.getElementById("resultBox");
+
+    textInput.addEventListener("input", () => {
+      charCount.textContent = textInput.value.length;
+    });
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.classList.add("show");
+      resultBox.classList.remove("show");
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorBox.classList.remove("show");
+
+      const text = textInput.value.trim();
+      if (text.length < 20) {
+        showError("Please enter at least 20 characters of actual job listing content. An empty or very short listing should not be classified.");
+        textInput.focus();
+        return;
+      }
+
+      // These keys must match the JobPosting Pydantic model in main.py.
+      const payload = {
+        text: text,
+        location: document.getElementById("location").value.trim(),
+        employment_type: document.getElementById("employment_type").value.trim(),
+        required_experience: document.getElementById("required_experience").value.trim(),
+        required_education: document.getElementById("required_education").value.trim(),
+        industry: document.getElementById("industry").value.trim(),
+        function: document.getElementById("function").value.trim(),
+        telecommuting: document.getElementById("telecommuting").checked ? 1 : 0,
+        has_company_logo: document.getElementById("has_company_logo").checked ? 1 : 0,
+        has_questions: document.getElementById("has_questions").checked ? 1 : 0
+      };
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Analyzing…";
+
+      try {
+        // Relative URL works because FastAPI serves this page from the same origin.
+        const response = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          const details = Array.isArray(data.detail)
+            ? data.detail.map(item => `${item.loc?.join(".") || "input"}: ${item.msg}`).join("; ")
+            : (data.detail || `Request failed with status ${response.status}`);
+          throw new Error(details);
+        }
+
+        if (typeof data.fraud_probability !== "number" || typeof data.prediction !== "number") {
+          throw new Error("The API response is missing prediction or fraud_probability.");
+        }
+
+        const probability = Math.max(0, Math.min(1, data.fraud_probability));
+        document.getElementById("resultValue").textContent = data.result || (data.prediction === 1 ? "Potentially fraudulent" : "Genuine");
+        document.getElementById("resultValue").style.color = data.prediction === 1 ? "var(--danger)" : "var(--accent2)";
+        document.getElementById("probabilityValue").textContent = `${(probability * 100).toFixed(2)}%`;
+        document.getElementById("meterFill").style.width = `${probability * 100}%`;
+        document.getElementById("meterFill").style.background = probability >= (data.threshold ?? 0.7) ? "var(--danger)" : "var(--accent2)";
+        document.getElementById("thresholdText").textContent = `Classification threshold: ${((data.threshold ?? 0.7) * 100).toFixed(0)}%`;
+        resultBox.classList.add("show");
+      } catch (error) {
+        showError(error.message || "Could not connect to the prediction API. Check that FastAPI is running.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Analyze job posting";
+      }
+    });
+  </script>
+</body>
+</html>
