@@ -1,26 +1,29 @@
 # Fake Job Posting Detector
 
-An NLP-powered Machine Learning application that detects potentially fraudulent job postings using Natural Language Processing, Logistic Regression, and structured employment attributes.
+An NLP-based Machine Learning application that identifies potentially fraudulent job postings using Natural Language Processing and classification algorithms.
 
-The application uses a trained Scikit-learn pipeline served through a FastAPI backend, with an interactive web interface built using HTML, CSS, and JavaScript.
+The project combines text analysis and structured employment attributes to estimate the probability of a job posting being fraudulent. The trained model is integrated into a FastAPI backend with an interactive frontend built using HTML, CSS, and JavaScript.
 
 ## Project Overview
 
-Online job platforms can contain fraudulent listings designed to mislead job seekers. This project aims to identify suspicious job postings by analyzing their textual content and employment-related attributes.
+Online job platforms can contain fraudulent listings designed to mislead job seekers through fake employment opportunities, unrealistic salaries, registration fees, and requests for sensitive personal information.
 
-The model estimates the probability that a job posting is fraudulent and classifies it using a configurable decision threshold.
+This project aims to identify potentially fraudulent job postings by analyzing their textual content and employment-related attributes.
 
-## Key Features
+The application generates a fraud probability and classifies the posting using a configurable decision threshold.
 
-- Fake job posting classification using Machine Learning.
-- NLP-based text analysis using TF-IDF.
+## Features
+
+- NLP-based job description analysis.
+- TF-IDF text feature extraction.
 - Structured employment attribute processing.
 - Handling of imbalanced classification data.
 - Comparison of Logistic Regression and Linear Support Vector Machine.
 - Probability-based fraud classification.
 - Configurable classification threshold.
-- FastAPI backend for real-time predictions.
-- Interactive and responsive web interface.
+- FastAPI backend for model inference.
+- Interactive web interface.
+- Input validation for insufficient job descriptions.
 
 ## Tech Stack
 
@@ -45,12 +48,15 @@ The target variable is `fraudulent`:
 - `0` — Genuine job posting
 - `1` — Fraudulent job posting
 
-The dataset is imbalanced, containing approximately:
+The dataset contains an imbalanced distribution:
 
-- Genuine postings: 17,014
-- Fraudulent postings: 866
+| Class | Number of Records |
+|---|---:|
+| Genuine | 17,014 |
+| Fraudulent | 866 |
+| **Total** | **17,880** |
 
-To address this imbalance, `class_weight='balanced'` was used during model training.
+To address class imbalance, `class_weight='balanced'` was used during model training.
 
 ## Machine Learning Workflow
 
@@ -59,11 +65,11 @@ To address this imbalance, `class_weight='balanced'` was used during model train
 - Handled missing values.
 - Combined relevant textual fields into a single text feature.
 - Removed irrelevant columns and identifiers.
-- Separated textual, categorical, and numerical features.
+- Separated text, categorical, binary, and numerical features.
 
 ### 2. Feature Engineering
 
-The model uses three categories of features:
+The model uses three categories of features.
 
 **Text features**
 - Job title
@@ -101,11 +107,11 @@ Two classification algorithms were implemented and evaluated using the same prep
 
 ## Model Comparison
 
-An important part of this project was comparing different classification algorithms before selecting the final model for deployment.
+A comparative evaluation was conducted to identify the most suitable classification algorithm for the project.
 
 ### Logistic Regression
 
-- Used balanced class weights to handle class imbalance.
+- Used balanced class weights to address class imbalance.
 - Evaluated at multiple probability thresholds.
 - Supports probability estimation through `predict_proba()`.
 - Threshold tuning was performed to balance fraud precision and recall.
@@ -128,7 +134,7 @@ The following results were obtained during model evaluation:
 | Fraud Recall | 86.71% | ~88% |
 | Fraud F1-score | 86.96% | ~86% |
 
-*Metrics are rounded where appropriate. LinearSVC was evaluated using its default decision predictions, not a probability threshold.*
+*Linear SVM metrics are approximate. LinearSVC was evaluated using its standard decision predictions, not a probability threshold.*
 
 ### Threshold Optimization — Logistic Regression
 
@@ -141,50 +147,54 @@ Different classification thresholds were tested to understand the trade-off betw
 | 0.6 | 76.73% | 89.60% | 82.67% |
 | 0.7 | 87.21% | 86.71% | 86.96% |
 
-Increasing the threshold improved precision while reducing recall. A threshold of 0.7 was selected as a practical balance between the two metrics.
+Increasing the threshold improved precision while reducing recall.
+
+A threshold of 0.7 was selected as a practical balance between identifying fraudulent listings and reducing false fraud alerts.
 
 ### Final Model Selection
 
-**Logistic Regression was selected as the final model.**
+**Logistic Regression was selected as the final deployed model.**
 
-Reasons for selection:
+Reasons:
 
 1. Higher fraud precision than LinearSVC in the recorded comparison.
 2. Better fraud F1-score.
 3. Supports probability estimation through `predict_proba()`.
-4. Allows threshold-based classification and risk estimation.
+4. Allows probability-based threshold tuning.
+5. Integrates naturally with the application's risk estimation interface.
 
-The final application uses the trained Logistic Regression pipeline with a fraud probability threshold of **0.7**.
+**Final model:** Logistic Regression with a fraud probability threshold of 0.7.
 
-*Evaluation note: Threshold selection was informed by the evaluation results. An independent untouched test set is recommended for an unbiased final performance estimate.*
+*Evaluation note: Threshold selection was informed by evaluation results. An independent untouched test set is recommended for an unbiased final performance estimate.*
 
 ## Application Architecture
 
-The trained model is integrated into a FastAPI application.
+The trained ML pipeline is integrated into a FastAPI application.
 
 ```text
-User
-  |
-  v
-HTML / CSS / JavaScript Frontend
-  |
-  v
-FastAPI Backend
-  |
-  v
-Input Validation and Feature Preparation
-  |
-  v
-Saved Scikit-learn Pipeline
-  |
-  v
-Fraud Probability Prediction
-  |
-  v
-Threshold-Based Classification
-  |
-  v
-Prediction Result Displayed to User
+              User
+                |
+                v
+       HTML / CSS / JavaScript
+                |
+                v
+          FastAPI Backend
+                |
+                v
+      Input Validation & Feature
+             Preparation
+                |
+                v
+      Saved Scikit-learn Pipeline
+                |
+                v
+       Fraud Probability Output
+                |
+                v
+       Threshold-Based Decision
+                |
+                v
+       Prediction Result Display
 ```
 
 ## Project Structure
@@ -197,7 +207,6 @@ fake_job_post_detector/
 ├── modeltraining.ipynb
 ├── fake_job_post_detector_model.pkl
 ├── requirements.txt
-├── Dockerfile
 └── .gitignore
 ```
 
@@ -243,13 +252,13 @@ uvicorn main:app --reload
 
 ### 6. Open the Application
 
-Frontend:
+**Frontend:**
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-FastAPI interactive documentation:
+**FastAPI Interactive Documentation:**
 
 ```text
 http://127.0.0.1:8000/docs
@@ -289,23 +298,24 @@ The API accepts job listing text and employment-related attributes.
 }
 ```
 
-The response above is an illustrative example.
+*The response is an illustrative example.*
+
+## Limitations
+
+- Model performance depends on the quality and distribution of the training dataset.
+- Unseen job posting patterns may affect prediction accuracy.
+- A high fraud probability does not prove that a listing is fraudulent.
+- The application should be treated as a screening tool, not a definitive fraud verification system.
+- Empty or insufficient job descriptions should be rejected rather than classified.
 
 ## Future Improvements
 
 - Evaluate the model on independent real-world job postings.
 - Experiment with additional machine learning algorithms.
-- Improve model generalization on unseen job listings.
+- Improve generalization on unseen job listings.
 - Add explainability to highlight suspicious listing attributes.
-- Deploy the application to a cloud platform.
+- Deploy the application to a cloud hosting platform.
 - Expand the dataset with more recent job postings.
-
-## Limitations
-
-- Predictions depend on the quality and distribution of the training dataset.
-- Unseen job posting patterns may affect model performance.
-- A high fraud probability does not prove that a listing is fraudulent.
-- The current model should be treated as a screening tool rather than a definitive fraud verification system.
 
 ## Author
 
